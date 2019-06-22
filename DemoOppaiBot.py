@@ -13,6 +13,7 @@ bot.remove_command('help')
 
 @bot.event
 async def on_ready():
+	print(discord.__version__)
 	print('Demo Oppai Bot is ready!')
 
 
@@ -162,6 +163,7 @@ async def room_delete(ctx):
 # 			cursor = connection.cursor()
 # 			cursor.execute("CREATE TABLE Gamenight(name TEXT, emoji TEXT, description TEXT)")
 # 		connection.close()
+# 		await ctx.message.add_reaction('✅')
 
 
 @bot.command(pass_context = True, hidden = True)
@@ -218,23 +220,23 @@ async def allgn(ctx):
 
 @bot.command(pass_context = True, hidden = True)
 async def gn(ctx):
-	role = ctx.guild.get_role(590185613433634846)
-	embed = discord.Embed(title = "Game night vote", color = 1146986, description = "Vote for what games you want to play:")
+	if await authorised(ctx):
+		role = ctx.guild.get_role(590185613433634846)
+		embed = discord.Embed(title = "Game night vote", color = 1146986, description = "Vote for what games you want to play:")
 
-	games = gngames()
-	emoji = []
-	for game in games:
-		name = to_string(game[0].split('_'))
-		embed.add_field(name = name, value = game[1])
-		emoji.append(game[1])
+		games = gngames()
+		emoji = []
+		for game in games:
+			name = to_string(game[0].split('_'))
+			embed.add_field(name = name, value = game[1])
+			emoji.append(game[1])
 
-	avatar = await (bot.fetch_user(590170545845305346))
-	embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
-	result = await ctx.channel.send(role.mention, embed = embed)
-	await ctx.channel.delete_messages([ctx.message])
-	for e in emoji:
-		await result.add_reaction(e)
-
+		avatar = await (bot.fetch_user(590170545845305346))
+		embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
+		result = await ctx.channel.send(role.mention, embed = embed)
+		await ctx.channel.delete_messages([ctx.message])
+		for e in emoji:
+			await result.add_reaction(e)
 
 
 def gngames():
@@ -256,7 +258,7 @@ def gngames():
 
 async def authorised(ctx):
 	if ctx.author.top_role.position < ctx.guild.get_role(590175228567748619).position:
-		ctx.channel.send("unauthorised command 😤")
+		await ctx.channel.send("unauthorised command 😤")
 		return False
 	return True
 
