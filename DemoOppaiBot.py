@@ -46,11 +46,6 @@ async def on_resume():
 	print("Demo Oppai Bot is resumed!")
 
 
-@bot.event
-async def on_guild_join(guild):
-	await guild.create_role(name = "Demo Oppai Bot", managed = True)
-
-
 # Gives members who join the server the Plebian role
 @bot.event
 async def on_member_join(member):
@@ -64,10 +59,11 @@ async def on_member_join(member):
 @bot.command(pass_context = True)
 async def help(ctx):
 	embed = discord.Embed(title = '**Commands**', color = discord.Colour.from_rgb(48, 114, 168))
-	embed.add_field(name = "room", value = "Creates a voice channel that only you can join. You can invite others with room_invite.", inline = False)
+	embed.add_field(name = "room", value = "Creates a voice channel that only you can join. You can invite others with $room_invite.", inline = False)
 	embed.add_field(name = "room_invite *<mention any number of people you want to invite>*", value = "Invite any number of people by mentioning them.", inline = False)
 	embed.add_field(name = "room_delete", value = "Delete your voice channel", inline = False)
 	embed.add_field(name = "ip", value = "Gives the IP of the server where games like gmod or SCP will be hosted on.", inline = False)
+	embed.add_field(name = "prefix", value = "Gives the prefix of the bot.", inline = False)
 
 	avatar_url = ctx.author.avatar_url
 	if not avatar_url:
@@ -87,8 +83,8 @@ async def help_hidden(ctx):
 	embed.add_field(name = "addgn *<name (with underscores instead of spaces!)> <emoji> <description (optional, no use currently)>*", value = "Adds a game to the database", inline = False)
 	embed.add_field(name = "delgn *<emoji>*", value = "Deletes the game with the given emoji from the database.", inline = False)
 	embed.add_field(name = "allgn", value = "Shows all games in the database in alphabetical order", inline = False)
-	embed.add_field(name = "gn", value = "Creates the announcement vote for Game night with all games in the database.", inline = False)
-	embed.add_field(name = "votesgn", value = "Counts all votes from the last message in the game-night channel and posts the results there.", inline = False)
+	embed.add_field(name = "gn *<custom message>*", value = "Creates the announcement vote for Game night with all games in the database. Also returns an id number, use this to end the vote with $votesgn <id number>", inline = False)
+	embed.add_field(name = "votesgn *<id given by the $gn command>", value = "Counts all votes from the last message in the game-night channel and posts the results there.", inline = False)
 
 	avatar_url = ctx.author.avatar_url
 	if not avatar_url:
@@ -186,6 +182,11 @@ async def ip(ctx):
 	await ctx.channel.send("`94.224.117.42`")
 
 
+@bot.command(pass_context = True)
+async def prefix(ctx):
+	await ctx.channel.send("Seems kinda obvious :thinking:")
+
+
 # @bot.command(pass_context = True, hidden = True)
 # async def creategn(ctx):
 # 	if await authorised(ctx):
@@ -250,7 +251,7 @@ async def allgn(ctx):
 
 
 @bot.command(pass_context = True, hidden = True)
-async def gn(ctx):
+async def gn(ctx, *input):
 	if await authorised(ctx):
 		channel = ctx.guild.get_channel(GNCHANNEL)
 		role = ctx.guild.get_role(GNROLE)
@@ -268,7 +269,8 @@ async def gn(ctx):
 		result = await channel.send(role.mention, embed = embed)
 		for e in emoji:
 			await result.add_reaction(e)
-		await ctx.channel.send(result.id)
+		output = to_string(input)
+		await channel.send(role.mention + " "  + output, embed = embed)
 
 
 @bot.command(pass_context = True, hidden = True)
