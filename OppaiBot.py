@@ -62,6 +62,9 @@ async def help(ctx):
 	embed.add_field(name = "room", value = "Creates a voice channel that only you can join. You can invite others with $room_invite.", inline = False)
 	embed.add_field(name = "room_invite *<mention any number of people you want to invite>*", value = "Invite any number of people by mentioning them.", inline = False)
 	embed.add_field(name = "room_delete", value = "Delete your voice channel", inline = False)
+	embed.add_field(name = "chat", value = "Creates a text channel that only you can join. You can invite others with $chat_invite.", inline = False)
+	embed.add_field(name = "chat_invite *<mention any number of people you want to invite>*", value = "Invite any number of people by mentioning them.", inline = False)
+	embed.add_field(name = "chat_delete", value = "Delete your voice channel", inline = False)
 	embed.add_field(name = "ip", value = "Gives the IP of the server where games like gmod or SCP will be hosted on.", inline = False)
 	embed.add_field(name = "prefix", value = "Gives the prefix of the bot.", inline = False)
 
@@ -78,23 +81,24 @@ async def help(ctx):
 
 @bot.command(pass_context = True)
 async def help_hidden(ctx):
-	embed = discord.Embed(title = '**Authorised Commands**', color = discord.Colour.from_rgb(48, 114, 168))
-	embed.add_field(name = "create_manual_role *<input message with a role mention>*", value = "Creates a message with an emote. People who click the emoji join the mentioned role.", inline = False)
-	embed.add_field(name = "addgn *<name (with underscores instead of spaces!)> <emoji> <description (optional, no use currently)>*", value = "Adds a game to the database", inline = False)
-	embed.add_field(name = "delgn *<emoji>*", value = "Deletes the game with the given emoji from the database.", inline = False)
-	embed.add_field(name = "allgn", value = "Shows all games in the database in alphabetical order", inline = False)
-	embed.add_field(name = "gn *<custom message>*", value = "Creates the announcement vote for Game night with all games in the database. Also returns an id number, use this to end the vote with $votesgn <id number>", inline = False)
-	embed.add_field(name = "votesgn *<id given by the $gn command>", value = "Counts all votes from the last message in the game-night channel and posts the results there.", inline = False)
+	if authorised(ctx):
+		embed = discord.Embed(title = '**Authorised Commands**', color = discord.Colour.from_rgb(48, 114, 168))
+		embed.add_field(name = "create_manual_role *<input message with a role mention>*", value = "Creates a message with an emote. People who click the emoji join the mentioned role.", inline = False)
+		embed.add_field(name = "addgn *<name (with underscores instead of spaces!)> <emoji> <description (optional, no use currently)>*", value = "Adds a game to the database", inline = False)
+		embed.add_field(name = "delgn *<emoji>*", value = "Deletes the game with the given emoji from the database.", inline = False)
+		embed.add_field(name = "allgn", value = "Shows all games in the database in alphabetical order", inline = False)
+		embed.add_field(name = "gn *<custom message>*", value = "Creates the announcement vote for Game night with all games in the database. Also returns an id number, use this to end the vote with $votesgn <id number>", inline = False)
+		embed.add_field(name = "votesgn *<id given by the $gn command>", value = "Counts all votes from the last message in the game-night channel and posts the results there.", inline = False)
 
-	avatar_url = ctx.author.avatar_url
-	if not avatar_url:
-		avatar_url = ctx.author.default_avatar_url
-	embed.set_thumbnail(url = avatar_url)
+		avatar_url = ctx.author.avatar_url
+		if not avatar_url:
+			avatar_url = ctx.author.default_avatar_url
+		embed.set_thumbnail(url = avatar_url)
 
-	avatar = await (bot.fetch_user(BOT))
-	embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
+		avatar = await (bot.fetch_user(BOT))
+		embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
 
-	await ctx.channel.send(embed = embed)
+		await ctx.channel.send(embed = embed)
 
 """
 =======================================================================================================================
@@ -118,7 +122,8 @@ async def on_raw_reaction_add(payload):
 		message = await channel.fetch_message(payload.message_id)
 		role = message.role_mentions[0]
 		member = bot.get_guild(payload.guild_id).get_member(payload.user_id)
-		await member.add_roles(role)
+		if not discord.utils.get(member.roles, id = role.id):
+			await member.add_roles(role)
 
 
 @bot.event
@@ -128,11 +133,13 @@ async def on_raw_reaction_remove(payload):
 		message = await channel.fetch_message(payload.message_id)
 		role = message.role_mentions[0]
 		member = bot.get_guild(payload.guild_id).get_member(payload.user_id)
-		await member.remove_roles(role)
+		if discord.utils.get(member.roles, id = role.id):
+			await member.remove_roles(role)
+
 
 """
 =======================================================================================================================
-	Private voice channels
+	Private voice/text channels
 =======================================================================================================================
 """
 
@@ -169,6 +176,40 @@ async def room_delete(ctx):
 		await ctx.message.add_reaction('✅')
 	else:
 		await ctx.channel.send("You don't have a private room 😤")
+
+
+@bot.command(pass_context = True)
+async def chat(ctx):
+	if discord.utils.get(ctx.guild.text_channels, name = str(ctx.author.name).lower() + "s-chat"):
+		await ctx.channel.send("You already have a private chat 😤")
+	else:
+		channel = await ctx.guild.create_text_channel(str(ctx.author.name).lower() + "s-chat", category = discord.utils.get(ctx.guild.categories, id = PRIVATECATEGORY))
+		await channel.set_permissions(ctx.guild.default_role, read_messages = False, send_messages = False)
+		await channel.set_permissions(ctx.author, manage_channels = True, read_messages = True, send_messages = True)
+		await ctx.message.add_reaction('✅')
+
+
+@bot.command(pass_context = True)
+async def chat_invite(ctx, *mentions):
+	channel = discord.utils.get(ctx.guild.text_channels, name = str(ctx.author.name).lower() + "s-chat")
+	if channel:
+		for mention in ctx.message.mentions:
+			invite = await channel.create_invite(max_uses = 1)
+			await channel.set_permissions(mention, read_messages = True, send_messages = True)
+			await mention.send("Invite from " + ctx.author.name + ":\nhttp://discord.gg/" + invite.code)
+		await ctx.message.add_reaction('✅')
+	else:
+		await ctx.channel.send("You don't have a private chat 😤")
+
+
+@bot.command(pass_context = True)
+async def chat_delete(ctx):
+	channel = discord.utils.get(ctx.guild.text_channels, name = str(ctx.author.name).lower() + "s-chat")
+	if channel:
+		await channel.delete()
+		await ctx.message.add_reaction('✅')
+	else:
+		await ctx.channel.send("You don't have a private chat 😤")
 
 """
 =======================================================================================================================
@@ -251,7 +292,7 @@ async def allgn(ctx):
 
 
 @bot.command(pass_context = True, hidden = True)
-async def gn(ctx):
+async def gn(ctx, *input):
 	if await authorised(ctx):
 		channel = ctx.guild.get_channel(GNCHANNEL)
 		role = ctx.guild.get_role(GNROLE)
@@ -270,7 +311,7 @@ async def gn(ctx):
 		for e in emoji:
 			await result.add_reaction(e)
 		output = to_string(input)
-		await channel.send(role.mention + " " + output, embed = embed)
+		await channel.send(role.mention + " "  + output, embed = embed)
 
 
 @bot.command(pass_context = True, hidden = True)
