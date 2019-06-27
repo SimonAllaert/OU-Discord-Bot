@@ -18,6 +18,7 @@ bot.remove_command('help')
 =======================================================================================================================
 """
 
+
 GNCHANNEL = 581652748257198080
 ROLECHANNEL = 570939014329401345
 PRIVATECATEGORY = 580166156095062027
@@ -27,6 +28,7 @@ BOTROLE = 593126690042150913
 PLEBIANROLE = 570937022643175434
 
 BOT = 590170545845305346
+
 
 """
 =======================================================================================================================
@@ -307,11 +309,14 @@ async def gn(ctx, *input):
 
 		avatar = await (bot.fetch_user(BOT))
 		embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
-		result = await channel.send(role.mention, embed = embed)
-		for e in emoji:
-			await result.add_reaction(e)
 		output = to_string(input)
-		await channel.send(role.mention + " "  + output, embed = embed)
+		result = await channel.send(role.mention + " " + output, embed = embed)
+		for e in emoji:
+			if len(e.split(":")) > 1:
+				await result.add_reaction(discord.utils.get(ctx.guild.emojis, name= e.split(":")[1]))
+			else:
+				await result.add_reaction(e)
+		await ctx.channel.send(result.id)
 
 
 @bot.command(pass_context = True, hidden = True)
