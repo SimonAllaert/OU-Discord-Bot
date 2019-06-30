@@ -30,7 +30,7 @@ BOT = 590170545845305346
 
 """
 =======================================================================================================================
-	Basics
+	Events
 =======================================================================================================================
 """
 
@@ -54,6 +54,13 @@ async def on_member_join(member):
 	# else:
 	# 	role = discord.utils.get(member.guild.roles, name = "Server Assistant")
 		await member.add_roles(role)
+
+
+"""
+=======================================================================================================================
+	Basics
+=======================================================================================================================
+"""
 
 
 @bot.command(pass_context = True)
@@ -99,6 +106,16 @@ async def help_hidden(ctx):
 		embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
 
 		await ctx.channel.send(embed = embed)
+
+
+	@bot.command(pass_context = True)
+	async def prefix(ctx):
+		await ctx.channel.send("Seems kinda obvious :thinking:")
+
+	@bot.command(pass_context = True)
+	async def version(ctx):
+		await ctx.channel.send("V 1.0.1")
+
 
 """
 =======================================================================================================================
@@ -221,11 +238,6 @@ async def chat_delete(ctx):
 @bot.command(pass_context = True)
 async def ip(ctx):
 	await ctx.channel.send("`94.224.117.42`")
-
-
-@bot.command(pass_context = True)
-async def prefix(ctx):
-	await ctx.channel.send("Seems kinda obvious :thinking:")
 
 
 # @bot.command(pass_context = True, hidden = True)
