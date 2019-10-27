@@ -11,26 +11,28 @@ with open('demotoken.txt', 'r') as file:
 bot = commands.Bot(command_prefix = prefix)
 bot.remove_command('help')
 
-
 """
 =======================================================================================================================
 	Static variables
 =======================================================================================================================
 """
 
+CNCHANNEL = 637657327457271839
 GNCHANNEL = 592302546115231764
 ROLECHANNEL = 590184386297856032
 PRIVATECATEGORY = 590174900539490315
 
+VERIFIED_ROLE = 637657407182602270
 GNROLE = 590185613433634846
 BOTROLE = 590175228567748619
-PLEBIANROLE = 590179116687556628
+PLEBIANROLE = 570937022643175434
+CNROLE = 637657529924452373
 
 BOT = 590170545845305346
 
 """
 =======================================================================================================================
-	Events
+	Basics
 =======================================================================================================================
 """
 
@@ -51,16 +53,9 @@ async def on_resume():
 async def on_member_join(member):
 	if not member.bot:
 		role = member.guild.get_role(PLEBIANROLE) # Doesnt do bots cause permission problem
-	# else:
-	# 	role = discord.utils.get(member.guild.roles, name = "Server Assistant")
+		# else:
+		# 	role = discord.utils.get(member.guild.roles, name = "Server Assistant")
 		await member.add_roles(role)
-
-
-"""
-=======================================================================================================================
-	Basics
-=======================================================================================================================
-"""
 
 
 @bot.command(pass_context = True)
@@ -108,15 +103,6 @@ async def help_hidden(ctx):
 		await ctx.channel.send(embed = embed)
 
 
-	@bot.command(pass_context = True)
-	async def prefix(ctx):
-		await ctx.channel.send("Seems kinda obvious :thinking:")
-
-	@bot.command(pass_context = True)
-	async def version(ctx):
-		await ctx.channel.send("V 1.0.1")
-
-
 """
 =======================================================================================================================
 	Manual role management
@@ -124,7 +110,7 @@ async def help_hidden(ctx):
 """
 
 
-@bot.command(pass_context = True, hidden=True)
+@bot.command(pass_context = True, hidden = True)
 async def create_manual_role(ctx, *input):
 	output = to_string(input)
 	message = await ctx.channel.send(output)
@@ -228,6 +214,7 @@ async def chat_delete(ctx):
 	else:
 		await ctx.channel.send("You don't have a private chat 😤")
 
+
 """
 =======================================================================================================================
 	Auto game night
@@ -238,6 +225,11 @@ async def chat_delete(ctx):
 @bot.command(pass_context = True)
 async def ip(ctx):
 	await ctx.channel.send("`94.224.117.42`")
+
+
+@bot.command(pass_context = True)
+async def prefix(ctx):
+	await ctx.channel.send("Seems kinda obvious :thinking:")
 
 
 # @bot.command(pass_context = True, hidden = True)
@@ -323,7 +315,7 @@ async def gn(ctx, *input):
 		result = await channel.send(role.mention + " " + output, embed = embed)
 		for e in emoji:
 			if len(e.split(":")) > 1:
-				await result.add_reaction(discord.utils.get(ctx.guild.emojis, name= e.split(":")[1]))
+				await result.add_reaction(discord.utils.get(ctx.guild.emojis, name = e.split(":")[1]))
 			else:
 				await result.add_reaction(e)
 		await ctx.channel.send(result.id)
@@ -339,8 +331,8 @@ async def votesgn(ctx, id):
 		reactions = sort_reactions(message.reactions)
 
 		for react in reactions:
-			name = get_game(react.emoji)[0][0]
-			embed.add_field(name = name, value = react.emoji + ": **" + str(react.count - 1) + "**", inline = False)
+			name = to_string(get_game(react.emoji)[0][0].split('_'))
+			embed.add_field(name = name, value = str(react.emoji) + ": **" + str(react.count - 1) + "**", inline = False)
 
 		avatar = await (bot.fetch_user(BOT))
 		embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
@@ -365,7 +357,7 @@ def get_game(emoji):
 	with connection:
 		cursor = connection.cursor()
 		sql = "SELECT * FROM Gamenight WHERE emoji LIKE ?"
-		cursor.execute(sql, (emoji,))
+		cursor.execute(sql, [str(emoji)])
 		output = cursor.fetchall()
 	connection.close()
 	return output
@@ -389,12 +381,180 @@ def sort_reactions(reacts):
 				swapped = True
 	return reacts
 
+
+"""
+=======================================================================================================================
+	Casual Night
+=======================================================================================================================
+"""
+
+
+@bot.command(pass_context = True, hidden = True)
+async def addcn(ctx, name, emoji, *description):
+	if await authorised(ctx):
+		connection = lite.connect('oppaic.db')
+		descriptionstr = to_string(description)
+		with connection:
+			cursor = connection.cursor()
+			sql = "INSERT INTO Gamenight VALUES(?, ?, ?)"
+			cursor.execute(sql, (name, emoji, descriptionstr))
+		connection.close()
+		await ctx.message.add_reaction('✅')
+
+
+@bot.command(pass_context = True, hidden = True)
+async def delcn(ctx, emoji):
+	if await authorised(ctx):
+		connection = lite.connect('oppaic.db')
+		with connection:
+			cursor = connection.cursor()
+			sql = "DELETE FROM Gamenight WHERE emoji LIKE ?"
+			cursor.execute(sql, (emoji,))
+		connection.close()
+		await ctx.message.add_reaction('✅')
+
+
+@bot.command(pass_context = True, hidden = True)
+async def allcn(ctx):
+	if await authorised(ctx):
+		connection = lite.connect('oppaic.db')
+		with connection:
+			cursor = connection.cursor()
+			sql = "SELECT * FROM Gamenight ORDER BY name"
+			cursor.execute(sql)
+			output = cursor.fetchall()
+		connection.close()
+
+		embed = discord.Embed(title = "Game night games", color = discord.Colour.from_rgb(48, 114, 168))
+		games = output
+		for game in games:
+			name = to_string(game[0].split('_'))
+			embed.add_field(name = name, value = game[1])
+
+		avatar_url = ctx.author.avatar_url
+		if not avatar_url:
+			avatar_url = ctx.author.default_avatar_url
+		embed.set_thumbnail(url = avatar_url)
+
+		avatar = await (bot.fetch_user(BOT))
+		embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
+		await ctx.channel.send(embed = embed)
+
+
+# @bot.command(pass_context = True, hidden = True)
+# async def cn(ctx, *input):
+# 	if await authorised(ctx):
+# 		channel = ctx.guild.get_channel(GNCHANNEL)
+# 		role = ctx.guild.get_role(CNROLE)
+# 		embed = discord.Embed(title = "Casual night vote", color = 1146986, description = "Vote for what games you want to play:")
+#
+# 		games = cngames()
+# 		emoji = []
+# 		for game in games:
+# 			name = to_string(game[0].split('_'))
+# 			embed.add_field(name = name, value = " " + str(game[1]))
+# 			emoji.append(game[1])
+#
+# 		avatar = await (bot.fetch_user(BOT))
+# 		embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
+# 		output = to_string(input)
+# 		result = await channel.send(role.mention + " " + output, embed = embed)
+# 		for e in emoji:
+# 			if len(e.split(":")) > 1:
+# 				await result.add_reaction(discord.utils.get(ctx.guild.emojis, name = e.split(":")[1]))
+# 			else:
+# 				await result.add_reaction(e)
+# 		await ctx.channel.send(result.id)
+
+
+# @bot.command(pass_context = True, hidden = True)
+# async def votescn(ctx, id):
+# 	if await authorised(ctx):
+# 		channel = ctx.guild.get_channel(GNCHANNEL)
+# 		role = ctx.guild.get_role(CNROLE)
+# 		message = await channel.fetch_message(id)
+# 		embed = discord.Embed(title = "Casual night vote results", color = 1146986, description = "Results of the casual night votes:")
+# 		reactions = sort_reactionsc(message.reactions)
+#
+# 		for react in reactions:
+# 			name = to_string(get_game(react.emoji)[0][0].split('_'))
+# 			embed.add_field(name = name, value = react.emoji + ": **" + str(react.count - 1) + "**", inline = False)
+#
+# 		avatar = await (bot.fetch_user(BOT))
+# 		embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
+# 		await channel.send(role.mention, embed = embed)
+
+
+@bot.command(pass_context = True)
+async def hostcn(ctx, emoji):
+	if await verified_authorised(ctx):
+		channel = ctx.guild.get_channel(CNCHANNEL)
+		role = ctx.guild.get_role(CNROLE)
+		game = to_string(get_gamec(emoji)[0][0].split('_'))
+
+		embed = discord.Embed(title = "Casual night host", color = discord.Colour.from_rgb(48, 114, 168))
+		embed.add_field(name = game, value = "is being hosted by " + ctx.author.name)
+		avatar = await (bot.fetch_user(BOT))
+		embed.set_footer(text = "powered by Oppai United", icon_url = avatar.avatar_url)
+
+		await channel.send(role.mention, embed = embed)
+
+
+# get all games from database
+def cngames():
+	connection = lite.connect('oppaic.db')
+	with connection:
+		cursor = connection.cursor()
+		sql = "SELECT * FROM Gamenight"
+		cursor.execute(sql)
+		output = cursor.fetchall()
+	connection.close()
+	return output
+
+
+# get game by emoji
+def get_gamec(emoji):
+	connection = lite.connect('oppaic.db')
+	with connection:
+		cursor = connection.cursor()
+		sql = "SELECT * FROM Gamenight WHERE emoji LIKE ?"
+		cursor.execute(sql, (emoji,))
+		output = cursor.fetchall()
+	connection.close()
+	return output
+
+
+# Bubble sort reactions, highest count first
+def sort_reactionsc(reacts):
+	def swap(i, j):
+		reacts[i], reacts[j] = reacts[j], reacts[i]
+
+	n = len(reacts)
+	swapped = True
+
+	x = -1
+	while swapped:
+		swapped = False
+		x += 1
+		for i in range(1, n - x):
+			if reacts[i - 1].count < reacts[i].count:
+				swap(i - 1, i)
+				swapped = True
+	return reacts
+
+
 """
 =======================================================================================================================
 	Help functions
 =======================================================================================================================
 """
 
+
+async def verified_authorised(ctx):
+	if ctx.guild.get_role(629784198286278696) in ctx.author.roles:
+		await ctx.channel.send("You are not verified :triumph:")
+		return False
+	return True
 
 async def authorised(ctx):
 	if ctx.author.top_role.position < ctx.guild.get_role(BOTROLE).position:

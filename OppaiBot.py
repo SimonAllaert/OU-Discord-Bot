@@ -11,7 +11,6 @@ with open('token.txt', 'r') as file:
 bot = commands.Bot(command_prefix = prefix)
 bot.remove_command('help')
 
-
 """
 =======================================================================================================================
 	Static variables
