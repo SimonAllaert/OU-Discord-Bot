@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 import discord
 from discord.ext import commands
 import sqlite3 as lite
@@ -39,12 +39,12 @@ BOT = 590170545845305346
 @bot.event
 async def on_ready():
 	print(discord.__version__)
-	print('Demo Oppai Bot is ready!')
+	print('Oppai Bot is ready!')
 
 
 @bot.event
 async def on_resume():
-	print("Demo Oppai Bot is resumed!")
+	print("Oppai Bot is resumed!")
 
 
 # Gives members who join the server the Plebian role
@@ -89,7 +89,7 @@ async def help(ctx):
 
 @bot.command(pass_context = True)
 async def help_hidden(ctx):
-	if authorised(ctx):
+	if await authorised(ctx):
 		embed = discord.Embed(title = '**Authorised Commands**', color = discord.Colour.from_rgb(48, 114, 168))
 		embed.add_field(name = "create_manual_role *<input message with a role mention>*", value = "Creates a message with an emote. People who click the emoji join the mentioned role.", inline = False)
 		embed.add_field(name = "addgn *<name (with underscores instead of spaces!)> <emoji> <description (optional, no use currently)>*", value = "Adds a game to the database", inline = False)
